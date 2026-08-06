@@ -7,7 +7,8 @@ export type ApplicationErrorCode =
   | "UNAUTHORIZED"
   | "TOKEN_EXPIRED"
   | "TOKEN_INVALID"
-  | "TOO_MANY_REQUESTS";
+  | "TOO_MANY_REQUESTS"
+  | "STORAGE_UNAVAILABLE";
 
 export class ApplicationError extends Error {
   constructor(

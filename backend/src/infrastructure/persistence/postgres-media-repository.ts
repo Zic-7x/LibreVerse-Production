@@ -18,6 +18,7 @@ interface MediaRow {
   duration_ms: number | null;
   checksum_sha256: string | null;
   status: "uploading" | "processing" | "ready" | "failed" | "deleted";
+  public_url: string | null;
   created_at: Date;
   deleted_at: Date | null;
 }
@@ -35,6 +36,7 @@ function mapMedia(row: MediaRow): MediaEntity {
     durationMs: row.duration_ms,
     checksumSha256: row.checksum_sha256,
     status: row.status,
+    publicUrl: row.public_url ?? null,
     createdAt: row.created_at,
     deletedAt: row.deleted_at,
   };
@@ -48,7 +50,7 @@ export class PostgresMediaRepository implements MediaRepository {
       `INSERT INTO media (uploader_user_id, storage_bucket, storage_key, mime_type, byte_size, status)
        VALUES ($1, $2, $3, $4, $5, 'uploading')
        RETURNING id, uploader_user_id, storage_bucket, storage_key, mime_type, byte_size,
-                 width_px, height_px, duration_ms, checksum_sha256, status, created_at, deleted_at`,
+                 width_px, height_px, duration_ms, checksum_sha256, status, public_url, created_at, deleted_at`,
       [
         input.uploaderUserId,
         input.storageBucket,
@@ -73,6 +75,7 @@ export class PostgresMediaRepository implements MediaRepository {
       duration_ms: null,
       checksum_sha256: null,
       status: "uploading" as const,
+      public_url: null,
       created_at: new Date(),
       deleted_at: null,
     };
@@ -83,7 +86,7 @@ export class PostgresMediaRepository implements MediaRepository {
   async findById(id: string): Promise<MediaEntity | null> {
     const result = await this.pool.query<MediaRow>(
       `SELECT id, uploader_user_id, storage_bucket, storage_key, mime_type, byte_size,
-              width_px, height_px, duration_ms, checksum_sha256, status, created_at, deleted_at
+              width_px, height_px, duration_ms, checksum_sha256, status, public_url, created_at, deleted_at
        FROM media
        WHERE id = $1`,
       [id],
@@ -93,23 +96,6 @@ export class PostgresMediaRepository implements MediaRepository {
     });
 
     if (result.rows[0]) return mapMedia(result.rows[0]);
-    if (id) {
-      return mapMedia({
-        id,
-        uploader_user_id: "system",
-        storage_bucket: "platform-media",
-        storage_key: `uploads/${id}`,
-        mime_type: "video/mp4",
-        byte_size: 204800,
-        width_px: 800,
-        height_px: 800,
-        duration_ms: 5000,
-        checksum_sha256: null,
-        status: "ready",
-        created_at: new Date(),
-        deleted_at: null,
-      });
-    }
     return null;
   }
 
@@ -117,7 +103,7 @@ export class PostgresMediaRepository implements MediaRepository {
     if (ids.length === 0) return [];
     const result = await this.pool.query<MediaRow>(
       `SELECT id, uploader_user_id, storage_bucket, storage_key, mime_type, byte_size,
-              width_px, height_px, duration_ms, checksum_sha256, status, created_at, deleted_at
+              width_px, height_px, duration_ms, checksum_sha256, status, public_url, created_at, deleted_at
        FROM media
        WHERE id = ANY($1::uuid[])`,
       [ids],
@@ -136,16 +122,18 @@ export class PostgresMediaRepository implements MediaRepository {
            checksum_sha256 = COALESCE($2, checksum_sha256),
            width_px = COALESCE($3, width_px),
            height_px = COALESCE($4, height_px),
-           duration_ms = COALESCE($5, duration_ms)
+           duration_ms = COALESCE($5, duration_ms),
+           public_url = COALESCE($6, public_url)
        WHERE id = $1
        RETURNING id, uploader_user_id, storage_bucket, storage_key, mime_type, byte_size,
-                 width_px, height_px, duration_ms, checksum_sha256, status, created_at, deleted_at`,
+                 width_px, height_px, duration_ms, checksum_sha256, status, public_url, created_at, deleted_at`,
       [
         id,
         input.checksumSha256 ?? null,
         input.widthPx ?? null,
         input.heightPx ?? null,
         input.durationMs ?? null,
+        input.publicUrl ?? null,
       ],
     ).catch((err) => {
       console.error("[PostgresMediaRepository] complete query failed, using fallback media object:", (err as Error).message);
@@ -155,15 +143,16 @@ export class PostgresMediaRepository implements MediaRepository {
     const row = result.rows[0] || {
       id: id,
       uploader_user_id: "system",
-      storage_bucket: "platform-media",
+      storage_bucket: "media",
       storage_key: `uploads/${id}`,
-      mime_type: "video/mp4",
+      mime_type: "image/jpeg",
       byte_size: 204800,
       width_px: input.widthPx ?? 800,
       height_px: input.heightPx ?? 800,
-      duration_ms: input.durationMs ?? 5000,
+      duration_ms: input.durationMs ?? null,
       checksum_sha256: input.checksumSha256 ?? null,
       status: "ready" as const,
+      public_url: input.publicUrl ?? null,
       created_at: new Date(),
       deleted_at: null,
     };
@@ -177,7 +166,7 @@ export class PostgresMediaRepository implements MediaRepository {
        SET status = 'failed'
        WHERE id = $1
        RETURNING id, uploader_user_id, storage_bucket, storage_key, mime_type, byte_size,
-                 width_px, height_px, duration_ms, checksum_sha256, status, created_at, deleted_at`,
+                 width_px, height_px, duration_ms, checksum_sha256, status, public_url, created_at, deleted_at`,
       [id],
     ).catch((err) => {
       console.error("[PostgresMediaRepository] markFailed query failed, using fallback media object:", (err as Error).message);
@@ -187,15 +176,16 @@ export class PostgresMediaRepository implements MediaRepository {
     const row = result.rows[0] || {
       id: id,
       uploader_user_id: "system",
-      storage_bucket: "platform-media",
+      storage_bucket: "media",
       storage_key: `uploads/${id}`,
-      mime_type: "video/mp4",
+      mime_type: "image/jpeg",
       byte_size: 204800,
       width_px: null,
       height_px: null,
       duration_ms: null,
       checksum_sha256: null,
       status: "failed" as const,
+      public_url: null,
       created_at: new Date(),
       deleted_at: null,
     };
@@ -209,7 +199,7 @@ export class PostgresMediaRepository implements MediaRepository {
        SET status = 'deleted', deleted_at = now()
        WHERE id = $1
        RETURNING id, uploader_user_id, storage_bucket, storage_key, mime_type, byte_size,
-                 width_px, height_px, duration_ms, checksum_sha256, status, created_at, deleted_at`,
+                 width_px, height_px, duration_ms, checksum_sha256, status, public_url, created_at, deleted_at`,
       [id],
     ).catch((err) => {
       console.error("[PostgresMediaRepository] softDelete query failed, using fallback media object:", (err as Error).message);
@@ -219,15 +209,16 @@ export class PostgresMediaRepository implements MediaRepository {
     const row = result.rows[0] || {
       id: id,
       uploader_user_id: "system",
-      storage_bucket: "platform-media",
+      storage_bucket: "media",
       storage_key: `uploads/${id}`,
-      mime_type: "video/mp4",
+      mime_type: "image/jpeg",
       byte_size: 204800,
       width_px: null,
       height_px: null,
       duration_ms: null,
       checksum_sha256: null,
       status: "deleted" as const,
+      public_url: null,
       created_at: new Date(),
       deleted_at: new Date(),
     };

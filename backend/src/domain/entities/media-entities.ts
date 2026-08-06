@@ -17,6 +17,7 @@ export interface MediaEntity {
   durationMs: number | null;
   checksumSha256: string | null;
   status: MediaStatus;
+  publicUrl?: string | null;
   createdAt: Date;
   deletedAt: Date | null;
 }
@@ -47,6 +48,7 @@ export function toSharedMedia(media: MediaEntity): SharedMedia {
     durationMs: media.durationMs,
     checksumSha256: media.checksumSha256,
     status: media.status,
+    publicUrl: media.publicUrl ?? null,
     createdAt: media.createdAt.toISOString(),
     deletedAt: media.deletedAt ? media.deletedAt.toISOString() : null,
   };

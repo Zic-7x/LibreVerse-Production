@@ -41,6 +41,13 @@ npm run db:migrate
 
 Migrations are tracked in the `schema_migrations` table. Re-running `db:migrate` is safe (already-applied versions are skipped).
 
+## Supabase Storage Provisioning
+
+When using Supabase for object storage:
+1. Open the Supabase Dashboard -> SQL Editor.
+2. Run the SQL script in `database/supabase_schema.sql` to initialize the storage buckets (`media`, `posts`, `reels`, `stories`, `avatars`, `attachments`) and their access policies.
+3. Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_ANON_KEY`) are configured in `.env`.
+
 ## Conventions
 
 - Migrations are the source of truth for schema evolution.

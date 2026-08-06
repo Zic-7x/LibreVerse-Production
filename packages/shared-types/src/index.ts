@@ -222,6 +222,19 @@ export interface ClaimAliasInput {
   alias: string;
 }
 
+export interface UserSearchResult {
+  userId: string;
+  displayName: string;
+  alias: string | null;
+  avatarMediaId: string | null;
+  isFriend?: boolean;
+  requestSent?: boolean;
+}
+
+export interface UserSearchResponse {
+  users: UserSearchResult[];
+}
+
 export interface ProfileResponse {
   profile: Profile;
   primaryAlias: PublicAlias | null;
@@ -241,6 +254,7 @@ export interface Media {
   durationMs: number | null;
   checksumSha256: string | null;
   status: MediaStatus;
+  publicUrl?: string | null;
   createdAt: string;
   deletedAt: string | null;
 }
@@ -445,7 +459,12 @@ export type RealtimeEventType =
   | "message.created"
   | "message.updated"
   | "message.deleted"
-  | "typing.indicator";
+  | "typing.indicator"
+  | "call.invite"
+  | "call.accept"
+  | "call.reject"
+  | "call.ice-candidate"
+  | "call.end";
 
 export interface RealtimeEvent<T = unknown> {
   eventId: string;
@@ -467,7 +486,49 @@ export interface WsTypingAction {
   isTyping: boolean;
 }
 
-export type WsClientAction = WsSubscribeAction | WsTypingAction;
+export interface WsCallInviteAction {
+  action: "call.invite";
+  conversationId?: string;
+  targetUserId: string;
+  callType?: "audio" | "video";
+  sdp?: unknown;
+}
+
+export interface WsCallAcceptAction {
+  action: "call.accept";
+  conversationId?: string;
+  targetUserId: string;
+  sdp?: unknown;
+}
+
+export interface WsCallRejectAction {
+  action: "call.reject";
+  conversationId?: string;
+  targetUserId: string;
+  reason?: string;
+}
+
+export interface WsCallIceCandidateAction {
+  action: "call.ice-candidate";
+  conversationId?: string;
+  targetUserId: string;
+  candidate: unknown;
+}
+
+export interface WsCallEndAction {
+  action: "call.end";
+  conversationId?: string;
+  targetUserId: string;
+}
+
+export type WsClientAction =
+  | WsSubscribeAction
+  | WsTypingAction
+  | WsCallInviteAction
+  | WsCallAcceptAction
+  | WsCallRejectAction
+  | WsCallIceCandidateAction
+  | WsCallEndAction;
 
 /** M8 Community API contracts */
 

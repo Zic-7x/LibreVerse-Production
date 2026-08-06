@@ -14,6 +14,7 @@ const STATUS_BY_CODE: Record<
   NOT_FOUND: 404,
   CONFLICT: 409,
   TOO_MANY_REQUESTS: 429,
+  STORAGE_UNAVAILABLE: 503,
 };
 
 export function mapApplicationError(error: unknown): {

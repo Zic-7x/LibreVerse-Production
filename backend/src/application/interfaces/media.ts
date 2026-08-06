@@ -16,6 +16,7 @@ export interface CompleteMediaInput {
   widthPx?: number;
   heightPx?: number;
   durationMs?: number;
+  publicUrl?: string;
 }
 
 export interface CreateVariantInput {

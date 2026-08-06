@@ -2,6 +2,7 @@ import type pg from "pg";
 import type {
   CreateProfileInput,
   ProfileRepository,
+  ProfileSearchResult,
   UpdateProfileInputData,
 } from "../../application/interfaces/profile.js";
 import type { ProfileEntity } from "../../domain/entities/profile-entities.js";
@@ -17,6 +18,13 @@ interface ProfileRow {
   is_discoverable: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+interface SearchProfileRow {
+  user_id: string;
+  display_name: string;
+  avatar_media_id: string | null;
+  alias: string | null;
 }
 
 function mapProfile(row: ProfileRow): ProfileEntity {
@@ -143,5 +151,51 @@ export class PostgresProfileRepository implements ProfileRepository {
     }
 
     return mapProfile(result.rows[0]);
+  }
+
+  async searchProfiles(
+    query: string,
+    excludeUserId: string,
+    limit = 20,
+  ): Promise<ProfileSearchResult[]> {
+    const cleanQuery = query.trim().replace(/^@/, "");
+    if (!cleanQuery) return [];
+
+    const searchPattern = `%${cleanQuery}%`;
+    const exactPattern = cleanQuery;
+    const safeLimit = Math.max(1, Math.min(limit, 50));
+
+    const result = await this.pool.query<SearchProfileRow>(
+      `SELECT 
+         p.user_id,
+         p.display_name,
+         p.avatar_media_id,
+         a.alias
+       FROM profiles p
+       JOIN users u ON u.id = p.user_id
+       LEFT JOIN public_aliases a ON a.user_id = p.user_id AND a.is_primary = true AND a.active_until IS NULL
+       WHERE (p.display_name ILIKE $1 OR a.alias ILIKE $1)
+         AND p.user_id != $2
+         AND p.is_discoverable = true
+         AND u.status = 'active'
+         AND u.deleted_at IS NULL
+       ORDER BY 
+         CASE 
+           WHEN a.alias ILIKE $3 THEN 1
+           WHEN a.alias ILIKE $1 THEN 2
+           WHEN p.display_name ILIKE $3 THEN 3
+           ELSE 4 
+         END,
+         p.display_name ASC
+       LIMIT $4`,
+      [searchPattern, excludeUserId, exactPattern, safeLimit],
+    );
+
+    return result.rows.map((row) => ({
+      userId: row.user_id,
+      displayName: row.display_name,
+      alias: row.alias,
+      avatarMediaId: row.avatar_media_id,
+    }));
   }
 }

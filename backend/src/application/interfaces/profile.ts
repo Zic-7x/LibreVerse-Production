@@ -20,10 +20,18 @@ export interface UpdateProfileInputData {
   isDiscoverable?: boolean;
 }
 
+export interface ProfileSearchResult {
+  userId: string;
+  displayName: string;
+  alias: string | null;
+  avatarMediaId: string | null;
+}
+
 export interface ProfileRepository {
   create(input: CreateProfileInput): Promise<ProfileEntity>;
   findByUserId(userId: string): Promise<ProfileEntity | null>;
   update(userId: string, data: UpdateProfileInputData): Promise<ProfileEntity>;
+  searchProfiles(query: string, excludeUserId: string, limit?: number): Promise<ProfileSearchResult[]>;
 }
 
 export interface PublicAliasRepository {
