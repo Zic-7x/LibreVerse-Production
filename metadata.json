@@ -1,0 +1,8 @@
+{
+  "name": "LibreVerse",
+  "description": "An unfiltered social platform designed for the next generation to connect, express, and share stories freely.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

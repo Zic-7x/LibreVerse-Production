@@ -1,0 +1,31 @@
+---
+description: Read the development roadmap before tasks; align code and architecture to milestones
+alwaysApply: true
+---
+
+# Development roadmap alignment
+
+## Before starting any implementation task
+
+1. **Read** `docs/guides/development-roadmap.md` (current milestone, scope, exit criteria, out-of-scope).
+2. **State** which milestone (M0–M18) the work belongs to. If it spans milestones or violates ordering, stop and propose a smaller change or a roadmap update first.
+3. **Respect milestone boundaries** — implement only what that milestone’s “Scope” allows; defer items listed under “Not in scope”.
+
+## Architectural decisions (must match roadmap + clean architecture)
+
+- **One major system per milestone** — do not add auth + messaging + communities (or similar) in one change set.
+- **Backend-first** — domain logic and HTTP/REST contracts on `backend` before `mobile`/`admin` UI for that domain (clients: M15+ unless explicitly M0 scaffolding).
+- **Incremental real-time** — WebSockets only after REST exists for that feature (e.g. M5 before M6).
+- **Layers** — `presentation → application → domain ← infrastructure`; domain has no DB/framework imports; schema/migrations stay in `database/`.
+- **Shared code** — types/enums in `packages/shared-types`; shared domain in `packages/domain-core`; packages must not import app surfaces.
+- **Vision vs v1** — product vision (privacy, E2E, Bluetooth, etc.) in the roadmap header guides direction; **v1 delivery** follows milestone order and the “Out of scope (v1 roadmap)” section (e.g. E2E encryption after M18 unless the roadmap is explicitly revised).
+
+## Definition of done (per milestone work)
+
+- Meet that milestone’s **exit criteria** (tests + smoke path).
+- Record stack/product choices in `docs/adr/` when the roadmap calls for it (e.g. M0–M1).
+- Update `docs/api/` when adding or changing public API surfaces (from M5 onward per roadmap).
+
+## When the task conflicts with the roadmap
+
+Do not silently expand scope. Either narrow the task to the active milestone or edit `docs/guides/development-roadmap.md` first (with user agreement) so vision, milestones, and out-of-scope stay consistent.
